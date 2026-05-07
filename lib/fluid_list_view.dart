@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 ///  * Supports both [Axis.vertical] and [Axis.horizontal] orientations.
 ///  * Custom spacing between items via the [spacing] parameter.
 ///  * Dynamic animation lag controlled by [delayFactor].
+///  * Built-in [onTopReached] and [onEndReached] callbacks for seamless infinite scrolling and pagination.
 ///
 /// See also:
 ///  * [ListView], the standard Flutter scrollable list.
@@ -29,6 +30,8 @@ class SmoothListView extends StatefulWidget {
     this.axis = Axis.vertical,
     this.delayFactor = 2,
     this.spacing = 0,
+    this.onEndReached,
+    this.onTopReached,
   });
 
   /// The total number of items in the list.
@@ -55,6 +58,18 @@ class SmoothListView extends StatefulWidget {
 
   /// The amount of empty space to place between adjacent items.
   final double spacing;
+
+  /// Called when the user scrolls to the end of the list.
+  ///
+  /// This is triggered once when the scroll offset reaches the maximum extent,
+  /// making it ideal for triggering "load more" logic or pagination.
+  final VoidCallback? onEndReached;
+
+  /// Called when the user scrolls back to the very top (or start) of the list.
+  ///
+  /// This is triggered when the scroll offset returns to zero, useful for
+  /// refreshing content or hiding specific UI elements.
+  final VoidCallback? onTopReached;
 
   @override
   State<SmoothListView> createState() => _SmoothListViewState();
@@ -106,6 +121,15 @@ class _SmoothListViewState extends State<SmoothListView> {
               double maxScroll = (totalListSize > stackSize)
                   ? -(totalListSize - stackSize)
                   : 0.0;
+
+              // Trigger edge callbacks only when the boundary is first crossed.
+              if (newOffset >= 0 && _scrollOffset < 0) {
+                widget.onTopReached?.call();
+              }
+
+              if (newOffset <= maxScroll && _scrollOffset > maxScroll) {
+                widget.onEndReached?.call();
+              }
 
               _scrollOffset = newOffset.clamp(maxScroll, 0.0);
             });

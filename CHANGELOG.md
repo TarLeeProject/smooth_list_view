@@ -1,3 +1,6 @@
+## 1.1.0
+Added `onTopReached` and `onEndReached` for seamless infinite scrolling and pagination.
+
 ## 1.0.2
 Correct README.md
 

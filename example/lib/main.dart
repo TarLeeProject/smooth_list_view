@@ -47,6 +47,8 @@ class _MyAppState extends State<MyApp> {
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
+                    onEndReached: () => debugPrint('End reached'),
+                    onTopReached: () => debugPrint('Top reached'),
                   ),
                 ),
                 FilledButton(
