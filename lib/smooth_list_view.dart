@@ -1,0 +1,197 @@
+import 'package:flutter/material.dart';
+
+/// A scrollable list that features smooth, interactive animations based on touch position.
+///
+/// [SmoothListView] provides a unique scrolling experience where list items react
+/// dynamically to the user's interaction point. The animation duration for each
+/// item is calculated based on its distance from the current touch position ([_touchPos]),
+/// creating a "fluid" or "organic" movement effect.
+///
+/// This widget uses an optimized [Stack] to render only the items within or near
+/// the visible viewport (a simple form of virtualization), ensuring performance
+/// stability even with a large [itemCount].
+///
+/// Key Features:
+///  * Supports both [Axis.vertical] and [Axis.horizontal] orientations.
+///  * Custom spacing between items via the [spacing] parameter.
+///  * Dynamic animation lag controlled by [delayFactor].
+///
+/// See also:
+///  * [ListView], the standard Flutter scrollable list.
+///  * [AnimatedPositioned], the underlying widget used for smooth transitions.
+class SmoothListView extends StatefulWidget {
+  /// Creates a [SmoothListView].
+  const SmoothListView({
+    super.key,
+    required this.itemCount,
+    required this.itemBuilder,
+    required this.itemSize,
+    this.axis = Axis.vertical,
+    this.delayFactor = 2,
+    this.spacing = 0,
+  });
+
+  /// The total number of items in the list.
+  final int itemCount;
+
+  /// A function that creates the list items based on their index.
+  final Widget Function(BuildContext, int) itemBuilder;
+
+  /// The axis along which the list scrolls.
+  ///
+  /// Defaults to [Axis.vertical].
+  final Axis axis;
+
+  /// The fixed size of each item along the main axis.
+  ///
+  /// (Height if [axis] is vertical, Width if horizontal).
+  final double itemSize;
+
+  /// A multiplier that determines the animation delay based on distance.
+  ///
+  /// Higher values make items further from the touch point appear "lazier"
+  /// or slower to catch up. Default value is `2`.
+  final double delayFactor;
+
+  /// The amount of empty space to place between adjacent items.
+  final double spacing;
+
+  @override
+  State<SmoothListView> createState() => _SmoothListViewState();
+}
+
+class _SmoothListViewState extends State<SmoothListView> {
+  /// The current scroll position of the list.
+  double _scrollOffset = 0.0;
+
+  /// The current interaction point (touch or drag) along the main axis.
+  double _touchPos = 0.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Determine the available viewing area based on the scroll axis.
+        final double stackSize = widget.axis == Axis.vertical
+            ? constraints.maxHeight
+            : constraints.maxWidth;
+
+        return GestureDetector(
+          onPanStart: (details) {
+            setState(() {
+              _touchPos = widget.axis == Axis.vertical
+                  ? details.localPosition.dy
+                  : details.localPosition.dx;
+            });
+          },
+          onPanUpdate: (details) {
+            setState(() {
+              _touchPos = widget.axis == Axis.vertical
+                  ? details.localPosition.dy
+                  : details.localPosition.dx;
+
+              // Calculate new offset based on user drag delta.
+              double newOffset =
+                  _scrollOffset +
+                  (widget.axis == Axis.vertical
+                      ? details.delta.dy
+                      : details.delta.dx);
+
+              // Calculate the total theoretical size of the list content.
+              double totalListSize =
+                  (widget.itemCount * widget.itemSize) +
+                  ((widget.itemCount - 1) * widget.spacing);
+
+              // Clamp the scroll offset to prevent scrolling out of bounds.
+              double maxScroll = (totalListSize > stackSize)
+                  ? -(totalListSize - stackSize)
+                  : 0.0;
+
+              _scrollOffset = newOffset.clamp(maxScroll, 0.0);
+            });
+          },
+          child: Container(
+            color: Colors
+                .transparent, // Ensure the GestureDetector hits even on empty areas.
+            child: _buildOptimizedStack(stackSize),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Builds a [Stack] containing only the items currently within the viewport.
+  ///
+  /// This implements basic virtualization by calculating which indices are
+  /// visible based on the current [_scrollOffset] and rendering only those,
+  /// plus a small buffer.
+  Widget _buildOptimizedStack(double stackSize) {
+    // Calculate how many items can fit in the viewport.
+    int visibleCount = (stackSize / (widget.itemSize + widget.spacing)).ceil();
+
+    // Determine the index of the first item in the viewport.
+    int currentLeadingIndex =
+        (-_scrollOffset / (widget.itemSize + widget.spacing)).floor();
+
+    // Define a range (with buffer) to render.
+    int startIndex = (currentLeadingIndex - visibleCount).clamp(
+      0,
+      widget.itemCount,
+    );
+    int endIndex = (currentLeadingIndex + visibleCount * 2).clamp(
+      0,
+      widget.itemCount,
+    );
+
+    return Stack(
+      children: [
+        for (int i = startIndex; i < endIndex; i++)
+          _buildAnimatedItem(i, stackSize),
+      ],
+    );
+  }
+
+  /// Builds an individual item wrapped in an [AnimatedPositioned] widget.
+  ///
+  /// [i] is the item index, and [containerSize] is used to normalize the
+  /// distance calculation for the animation duration.
+  Widget _buildAnimatedItem(int i, double containerHeight) {
+    // Target position of the item based on the current scroll offset.
+    double target = (i * (widget.itemSize + widget.spacing)) + _scrollOffset;
+
+    // Absolute distance from the item to the user's touch point.
+    double distanceToTouch = (target - _touchPos).abs();
+
+    // Normalize distance to a 0.0 - 1.0 range.
+    double normalizedDistance = (distanceToTouch / containerHeight).clamp(
+      0.0,
+      1.0,
+    );
+
+    // Calculate duration: items closer to the touch move faster, further move slower.
+    final durationValue = 1.0 + (normalizedDistance * widget.delayFactor);
+
+    return AnimatedPositioned(
+      key: ValueKey('item_$i'),
+      duration: Duration(milliseconds: (200 * durationValue).toInt()),
+      curve: Curves.easeOutQuart,
+      // Handle positioning logic for both vertical and horizontal axes.
+      top: widget.axis == Axis.vertical ? target : 0,
+      bottom: widget.axis == Axis.vertical ? null : 0,
+      left: widget.axis == Axis.vertical ? 0 : target,
+      right: widget.axis == Axis.vertical ? 0 : null,
+      height: widget.axis == Axis.vertical
+          ? widget.itemSize + (i == 0 ? 0 : widget.spacing)
+          : null,
+      width: widget.axis == Axis.horizontal
+          ? widget.itemSize + (i == 0 ? 0 : widget.spacing)
+          : null,
+      child: Padding(
+        padding: widget.axis == Axis.vertical
+            ? EdgeInsets.only(bottom: i == 0 ? 0 : widget.spacing)
+            : EdgeInsets.only(right: i == 0 ? 0 : widget.spacing),
+        child: widget.itemBuilder(context, i),
+      ),
+    );
+  }
+}
