@@ -13,6 +13,12 @@ A Flutter widget that creates a high-performance, interactive list where items f
 
 ---
 
+## Live Demo
+Try it out in your browser:  
+**[https://fluid-list-view-demo.netlify.app/](https://fluid-list-view-demo.netlify.app/)**
+
+---
+
 ## Features
 
 *   **Interactive Fluid Motion**: Items react to touch position with a dynamic delay based on distance.
