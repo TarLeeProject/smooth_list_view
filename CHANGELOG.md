@@ -1,3 +1,7 @@
+## 1.2.0
+- Added pull-to-refresh support with callback `onRefresh`, allow to custom `refreshThreshold`.
+- Custom indicators with `refreshIndicator` and `loadingIndicator`.
+
 ## 1.1.0
 Added `onTopReached` and `onEndReached` for seamless infinite scrolling and pagination.
 

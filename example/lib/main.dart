@@ -49,6 +49,7 @@ class _MyAppState extends State<MyApp> {
                     ),
                     onEndReached: () => debugPrint('End reached'),
                     onTopReached: () => debugPrint('Top reached'),
+                    onRefresh: () => Future.delayed(const Duration(seconds: 2)),
                   ),
                 ),
                 FilledButton(

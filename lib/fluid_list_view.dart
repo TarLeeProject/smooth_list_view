@@ -15,7 +15,10 @@ import 'package:flutter/material.dart';
 ///  * Supports both [Axis.vertical] and [Axis.horizontal] orientations.
 ///  * Custom spacing between items via the [spacing] parameter.
 ///  * Dynamic animation lag controlled by [delayFactor].
-///  * Built-in [onTopReached] and [onEndReached] callbacks for seamless infinite scrolling and pagination.
+///  * Built-in [onTopReached] and [onEndReached] callbacks for seamless infinite
+///  scrolling and pagination.
+///  * Support pull-to-refresh with callback [onRefresh], allow to custom [refreshThreshold],
+///  [refreshIndicator] and [loadingIndicator].
 ///
 /// See also:
 ///  * [ListView], the standard Flutter scrollable list.
@@ -32,6 +35,10 @@ class SmoothListView extends StatefulWidget {
     this.spacing = 0,
     this.onEndReached,
     this.onTopReached,
+    this.refreshThreshold = 80.0,
+    this.onRefresh,
+    this.loadingIndicator,
+    this.refreshIndicator,
   });
 
   /// The total number of items in the list.
@@ -71,6 +78,30 @@ class SmoothListView extends StatefulWidget {
   /// refreshing content or hiding specific UI elements.
   final VoidCallback? onTopReached;
 
+  /// Callback triggered when the user performs a pull-to-refresh gesture.
+  ///
+  /// When provided, the widget will enable pull-to-refresh functionality.
+  /// It must return a [Future] to signal when the refreshing process is complete.
+  final Future<void> Function()? onRefresh;
+
+  /// The distance threshold that must be dragged to trigger [onRefresh].
+  ///
+  /// This defines the sensitivity of the pull gesture. If not specified,
+  /// a default value based on the platform's standard behavior will be used.
+  final double refreshThreshold;
+
+  /// A custom widget displayed while the user is actively pulling down.
+  ///
+  /// Typically used to show a dynamic icon or text that responds to the drag
+  /// distance. If null, a default system indicator will be shown.
+  final Widget? refreshIndicator;
+
+  /// A custom widget displayed while the [onRefresh] future is executing.
+  ///
+  /// This represents the active loading state (e.g., a spinning progress bar).
+  /// If null, the widget will fall back to a default loading animation.
+  final Widget? loadingIndicator;
+
   @override
   State<SmoothListView> createState() => _SmoothListViewState();
 }
@@ -81,6 +112,12 @@ class _SmoothListViewState extends State<SmoothListView> {
 
   /// The current interaction point (touch or drag) along the main axis.
   double _touchPos = 0.0;
+
+  /// A flag indicating whether the list is currently refreshing.
+  bool _isRefreshing = false;
+
+  /// The current displacement of the pull-to-refresh gesture.
+  double _pullDistance = 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -105,39 +142,93 @@ class _SmoothListViewState extends State<SmoothListView> {
                   ? details.localPosition.dy
                   : details.localPosition.dx;
 
-              // Calculate new offset based on user drag delta.
-              double newOffset =
-                  _scrollOffset +
-                  (widget.axis == Axis.vertical
-                      ? details.delta.dy
-                      : details.delta.dx);
+              final delta = widget.axis == Axis.vertical
+                  ? details.delta.dy
+                  : details.delta.dx;
 
-              // Calculate the total theoretical size of the list content.
-              double totalListSize =
-                  (widget.itemCount * widget.itemSize) +
-                  ((widget.itemCount - 1) * widget.spacing);
+              if (_scrollOffset >= 0 && delta > 0) {
+                _pullDistance += delta * 0.5;
+              } else if (_pullDistance > 0 && delta < 0) {
+                _pullDistance += delta;
+                if (_pullDistance < 0) _pullDistance = 0;
+              } else {
+                // Calculate new offset based on user drag delta.
+                double newOffset = _scrollOffset + delta;
 
-              // Clamp the scroll offset to prevent scrolling out of bounds.
-              double maxScroll = (totalListSize > stackSize)
-                  ? -(totalListSize - stackSize)
-                  : 0.0;
+                // Calculate the total theoretical size of the list content.
+                double totalListSize =
+                    (widget.itemCount * widget.itemSize) +
+                    ((widget.itemCount - 1) * widget.spacing);
 
-              // Trigger edge callbacks only when the boundary is first crossed.
-              if (newOffset >= 0 && _scrollOffset < 0) {
-                widget.onTopReached?.call();
+                // Clamp the scroll offset to prevent scrolling out of bounds.
+                double maxScroll = (totalListSize > stackSize)
+                    ? -(totalListSize - stackSize)
+                    : 0.0;
+
+                // Trigger edge callbacks only when the boundary is first crossed.
+                if (newOffset >= 0 && _scrollOffset < 0) {
+                  widget.onTopReached?.call();
+                }
+
+                if (newOffset <= maxScroll && _scrollOffset > maxScroll) {
+                  widget.onEndReached?.call();
+                }
+
+                _scrollOffset = newOffset.clamp(maxScroll, 0.0);
               }
-
-              if (newOffset <= maxScroll && _scrollOffset > maxScroll) {
-                widget.onEndReached?.call();
-              }
-
-              _scrollOffset = newOffset.clamp(maxScroll, 0.0);
             });
+          },
+          onPanEnd: (_) async {
+            if (_pullDistance > widget.refreshThreshold &&
+                widget.onRefresh != null &&
+                !_isRefreshing) {
+              setState(() {
+                _isRefreshing = true;
+                _pullDistance = widget.refreshThreshold;
+              });
+
+              await widget.onRefresh!();
+
+              if (mounted) {
+                setState(() {
+                  _isRefreshing = false;
+                  _pullDistance = 0;
+                });
+              }
+            } else {
+              setState(() => _pullDistance = 0);
+            }
           },
           child: Container(
             color: Colors
                 .transparent, // Ensure the GestureDetector hits even on empty areas.
-            child: _buildOptimizedStack(stackSize),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  top: widget.axis == Axis.vertical ? _pullDistance : 0,
+                  left: widget.axis == Axis.horizontal ? _pullDistance : 0,
+                  child: _buildOptimizedStack(stackSize),
+                ),
+                if (_pullDistance > 0)
+                  Positioned(
+                    top: widget.axis == Axis.vertical ? 20 : null,
+                    left: widget.axis == Axis.vertical ? 0 : 20,
+                    right: widget.axis == Axis.vertical ? 0 : null,
+                    child: Center(
+                      child: _isRefreshing
+                          ? widget.loadingIndicator ??
+                                const CircularProgressIndicator()
+                          : Opacity(
+                              opacity: (_pullDistance / widget.refreshThreshold)
+                                  .clamp(0, 1),
+                              child:
+                                  widget.refreshIndicator ??
+                                  const Icon(Icons.arrow_downward),
+                            ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },

@@ -31,6 +31,7 @@ Try it out in your browser:
 *   **Customizable Physics**: Control the "laziness" of the animation using the `delayFactor`.
 *   **Lightweight**: Built using core Flutter widgets like `AnimatedPositioned` and `GestureDetector`.
 *   **Edge Awareness**: Built-in `onTopReached` and `onEndReached` callbacks for seamless infinite scrolling and pagination.
+*   **Pull-to-Refresh**: Support pull-to-refresh with callback [onRefresh], allow to custom [refreshThreshold], [refreshIndicator] and [loadingIndicator].
 
 ---
 
@@ -39,4 +40,4 @@ Try it out in your browser:
 Add to your `pubspec.yaml`:
 ```yaml
 dependencies:
-  fluid_list_view: ^1.1.0
+  fluid_list_view: ^1.2.0
