@@ -1,4 +1,4 @@
-# smooth_list_view
+# fluid_list_view
 
 A Flutter widget that creates a high-performance, interactive list where items follow the user's touch with a smooth, organic lag effect. It features built-in virtualization to handle large lists efficiently by only rendering visible items.
 
@@ -34,4 +34,4 @@ Try it out in your browser:
 Add to your `pubspec.yaml`:
 ```yaml
 dependencies:
-  smooth_list_view: ^1.0.0
+  fluid_list_view: ^1.0.1
