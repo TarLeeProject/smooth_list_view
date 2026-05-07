@@ -2,6 +2,15 @@
 
 A Flutter widget that creates a high-performance, interactive list where items follow the user's touch with a smooth, organic lag effect. It features built-in virtualization to handle large lists efficiently by only rendering visible items.
 
+|                                                         delayFactor = 0                                                         |                                                         delayFactor = 3                                                          |                                                         delayFactor = 10                                                          |
+|:-------------------------------------------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------------------------------------:|
+| ![Demo screenshot](https://raw.githubusercontent.com/TarLeeProject/smooth_list_view/refs/heads/main/example/example-vert-0.gif) | ![Demo screenshot2](https://raw.githubusercontent.com/TarLeeProject/smooth_list_view/refs/heads/main/example/example-vert-3.gif) | ![Demo screenshot2](https://raw.githubusercontent.com/TarLeeProject/smooth_list_view/refs/heads/main/example/example-vert-10.gif) |
+
+
+|                                                                                                                                                                                axis = Axis.horizontal & delayFactor = 2                                                                                                                                                                                |
+|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|                                                                                                                                    ![Demo screenshot](https://raw.githubusercontent.com/TarLeeProject/smooth_list_view/refs/heads/main/example/example-hori-2.gif)                                                                                                                                     |
+
 ---
 
 ## Features
