@@ -1,3 +1,6 @@
+## 1.3.0
+- Added `preInitItemCount` to preload items before the user reaches them.
+
 ## 1.2.0
 - Added pull-to-refresh support with callback `onRefresh`, allow to custom `refreshThreshold`.
 - Custom indicators with `refreshIndicator` and `loadingIndicator`.

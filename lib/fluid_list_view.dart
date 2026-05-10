@@ -39,6 +39,7 @@ class SmoothListView extends StatefulWidget {
     this.onRefresh,
     this.loadingIndicator,
     this.refreshIndicator,
+    this.preInitItemCount,
   });
 
   /// The total number of items in the list.
@@ -102,6 +103,12 @@ class SmoothListView extends StatefulWidget {
   /// If null, the widget will fall back to a default loading animation.
   final Widget? loadingIndicator;
 
+  /// Amount of items to render before and after the viewport.
+  ///
+  /// This is useful for preloading items before the user reaches them,
+  /// which can improve performance and provide a smoother user experience.
+  final int? preInitItemCount;
+
   @override
   State<SmoothListView> createState() => _SmoothListViewState();
 }
@@ -153,15 +160,15 @@ class _SmoothListViewState extends State<SmoothListView> {
                 if (_pullDistance < 0) _pullDistance = 0;
               } else {
                 // Calculate new offset based on user drag delta.
-                double newOffset = _scrollOffset + delta;
+                final newOffset = _scrollOffset + delta;
 
                 // Calculate the total theoretical size of the list content.
-                double totalListSize =
+                final totalListSize =
                     (widget.itemCount * widget.itemSize) +
                     ((widget.itemCount - 1) * widget.spacing);
 
                 // Clamp the scroll offset to prevent scrolling out of bounds.
-                double maxScroll = (totalListSize > stackSize)
+                final maxScroll = (totalListSize > stackSize)
                     ? -(totalListSize - stackSize)
                     : 0.0;
 
@@ -242,18 +249,22 @@ class _SmoothListViewState extends State<SmoothListView> {
   /// plus a small buffer.
   Widget _buildOptimizedStack(double stackSize) {
     // Calculate how many items can fit in the viewport.
-    int visibleCount = (stackSize / (widget.itemSize + widget.spacing)).ceil();
+    final visibleCount = (stackSize / (widget.itemSize + widget.spacing))
+        .ceil();
 
     // Determine the index of the first item in the viewport.
-    int currentLeadingIndex =
+    final currentLeadingIndex =
         (-_scrollOffset / (widget.itemSize + widget.spacing)).floor();
 
+    // Define amount of items to render before and after the viewport.
+    final bufferCount = widget.preInitItemCount ?? visibleCount;
+
     // Define a range (with buffer) to render.
-    int startIndex = (currentLeadingIndex - visibleCount).clamp(
+    final startIndex = (currentLeadingIndex - bufferCount).clamp(
       0,
       widget.itemCount,
     );
-    int endIndex = (currentLeadingIndex + visibleCount * 2).clamp(
+    final endIndex = (currentLeadingIndex + visibleCount + bufferCount).clamp(
       0,
       widget.itemCount,
     );
@@ -272,13 +283,13 @@ class _SmoothListViewState extends State<SmoothListView> {
   /// distance calculation for the animation duration.
   Widget _buildAnimatedItem(int i, double containerHeight) {
     // Target position of the item based on the current scroll offset.
-    double target = (i * (widget.itemSize + widget.spacing)) + _scrollOffset;
+    final target = (i * (widget.itemSize + widget.spacing)) + _scrollOffset;
 
     // Absolute distance from the item to the user's touch point.
-    double distanceToTouch = (target - _touchPos).abs();
+    final distanceToTouch = (target - _touchPos).abs();
 
     // Normalize distance to a 0.0 - 1.0 range.
-    double normalizedDistance = (distanceToTouch / containerHeight).clamp(
+    final normalizedDistance = (distanceToTouch / containerHeight).clamp(
       0.0,
       1.0,
     );

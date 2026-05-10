@@ -1,6 +1,6 @@
 name: fluid_list_view
-description: "Smooth List View"
-version: 1.2.0
+description: "A Flutter widget that creates a high-performance, interactive list where items follow the user's touch with a smooth, organic lag effect."
+version: 1.3.0
 homepage: "https://github.com/TarLeeProject/smooth_list_view"
 
 environment:
